@@ -1,0 +1,6 @@
+tk
+pyserial
+pyyaml
+addict
+structlog
+black
