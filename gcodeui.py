@@ -15,6 +15,7 @@ logger = structlog.get_logger()
 
 class GCodeApp:
     NUM_COLS = 4
+    FG = "#ffffff"
 
     def __init__(self, master, args):
         cfg = self.load_config(args)
@@ -27,7 +28,7 @@ class GCodeApp:
         self.label.grid(row=0, column=0, sticky="nw")
 
         self.entry = Entry(master)
-        self.entry.grid(row=0, column=1, columnspan=2, sticky='new')
+        self.entry.grid(row=0, column=1, columnspan=2, sticky="new")
         self.entry.bind("<Return>", lambda event: self.send_gcode())
 
         self.send_button = Button(master, text="Send", command=self.send_gcode)
@@ -41,6 +42,7 @@ class GCodeApp:
                 master,
                 text=cmd["title"],
                 bg=self.get_color(cmd),
+                fg=GCodeApp.FG,
                 command=partial(self.send_specific_gcode, cmd["command"]),
             )
             grid = button.grid(row=row, column=col, sticky="nw")
@@ -54,16 +56,22 @@ class GCodeApp:
         master.grid_rowconfigure(row + 1, weight=1)
         master.grid_columnconfigure(row, weight=1)
 
-        self.textbox = Text(master, wrap='word', width=40, height=30)
+        self.textbox = Text(master, wrap="word", width=40, height=30)
         # self.textbox.grid(row=row + 1, column=0, sticky='nsew')
-        self.textbox.grid(row=row + 1, column=0, rowspan=2, columnspan=GCodeApp.NUM_COLS, sticky='nsew')
+        self.textbox.grid(
+            row=row + 1,
+            column=0,
+            rowspan=2,
+            columnspan=GCodeApp.NUM_COLS,
+            sticky="nsew",
+        )
 
         self.scrollbar = Scrollbar(master, command=self.textbox.yview)
-        self.scrollbar.grid(row=row + 1, column=GCodeApp.NUM_COLS, sticky='nse')
+        self.scrollbar.grid(row=row + 1, column=GCodeApp.NUM_COLS, sticky="nse")
         self.textbox.config(yscrollcommand=self.scrollbar.set)
 
         self.close_button = Button(master, text="Close", command=master.quit)
-        self.close_button.grid(row=row + 3, column=GCodeApp.NUM_COLS )
+        self.close_button.grid(row=row + 3, column=GCodeApp.NUM_COLS)
         master.bind("<Escape>", lambda event=None: root.quit())
 
         logger.info(f"Initializing serial port {port} : {baud}")
@@ -82,7 +90,7 @@ class GCodeApp:
         self.textbox.insert(END, line + "\n")
         self.textbox.see(END)
         print(line)
-        
+
     def send_specific_gcode(self, command):
         if isinstance(command, str):
             self.ser.write((command + "\n").encode())
@@ -121,7 +129,7 @@ class GCodeApp:
             return Dict(cfg)
         else:
             return Dict()
-        
+
     def get_color(self, cmd: dict):
         color = cmd.get("color", "#c0c0c0")
         return color
