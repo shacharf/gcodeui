@@ -1,0 +1,35 @@
+port: "/dev/ttyUSB0"
+baud: 115200
+commands:
+  - title: pos
+    command: M114
+    color: "#008000"
+  - title: status
+    command: M503
+    color: "#008000"
+  - title: Relative
+    command: G91
+    color: "#b00000"
+  - title: Absolute
+    command: G90
+    color: "#b00000"
+  - title: OriginXY
+    command: "G92 X0 Y0"
+    color: "#b00000"
+  - title: OriginZ
+    command: "G92 Z0"
+    color: "#b00000"
+  - title: debug
+    command:  "M111 S38"
+    color: "#008000"
+  - title: Init54
+    command: 
+    - G54
+    - G92 X0 Y0
+    - M211 S0
+    - M117 CNC ready
+    color: "#808000"
+  - title: Emergency stop
+    command: M112
+    color: "#ff0000"
+
