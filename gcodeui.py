@@ -1,13 +1,14 @@
-import os
-import serial
-from tkinter import Tk, Label, Button, Entry, Text, Scrollbar, END
-from addict import Dict
 import argparse
-from functools import partial
-import structlog
 import threading
 import time
+from functools import partial
+from pathlib import Path
+
+import serial
+import structlog
 import yaml
+from addict import Dict
+from tkinter import END, Button, Entry, Label, Scrollbar, Text, Tk
 
 
 logger = structlog.get_logger()
@@ -37,7 +38,7 @@ class GCodeApp:
         row = 1
         col = 0
         self.buttons = []
-        for cmd in cfg.commands:
+        for cmd in cfg.get("commands", []):
             button = Button(
                 master,
                 text=cmd["title"],
@@ -72,7 +73,7 @@ class GCodeApp:
 
         self.close_button = Button(master, text="Close", command=master.quit)
         self.close_button.grid(row=row + 3, column=GCodeApp.NUM_COLS)
-        master.bind("<Escape>", lambda event=None: root.quit())
+        master.bind("<Escape>", lambda event=None: master.quit())
 
         logger.info(f"Initializing serial port {port} : {baud}")
         self.ser = serial.Serial(port, baud, timeout=1)
@@ -98,7 +99,7 @@ class GCodeApp:
         elif isinstance(command, list):
             for cmd_i in command:
                 self.ser.write((cmd_i + "\n").encode())
-                self.print(f"Sent: {cmd_i}")
+                self.lprint(f"Sent: {cmd_i}")
                 time.sleep(0.1)  # Not sure it is required
 
     def read_from_serial(self):
@@ -113,35 +114,61 @@ class GCodeApp:
         baud = 115200
         if args.port is not None:
             port = args.port
-        elif cfg.port is not None:
-            port = cfg.port
+        else:
+            cfg_port = cfg.get("port")
+            if cfg_port is not None:
+                port = cfg_port
 
         if args.baud is not None:
             baud = args.baud
-        if cfg.baud is not None:
-            baud = cfg.baud
+        else:
+            cfg_baud = cfg.get("baud")
+            if cfg_baud is not None:
+                baud = cfg_baud
 
         return port, baud
 
     def load_config(self, args):
-        if os.path.exists(args.cfg):
-            cfg = yaml.safe_load(open(args.cfg))
-            return Dict(cfg)
-        else:
-            return Dict()
+        attempts = []
+        for path in self.config_candidates(args):
+            attempts.append(str(path))
+            if path and path.exists():
+                with path.open("r", encoding="utf-8") as fh:
+                    cfg = yaml.safe_load(fh) or {}
+                logger.info("Loaded config file", path=str(path))
+                return Dict(cfg)
+
+        logger.warning("Config file not found, using defaults", attempts=attempts)
+        return Dict()
+
+    def config_candidates(self, args):
+        if getattr(args, "cfg", None):
+            yield Path(args.cfg).expanduser()
+        yield Path.cwd() / "config.yaml"
+        yield Path(__file__).with_name("config.yaml")
+        yield Path.home() / ".config" / "gcodeui" / "config.yaml"
 
     def get_color(self, cmd: dict):
         color = cmd.get("color", "#c0c0c0")
         return color
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--cfg", type=str, default="config.yaml")
-parser.add_argument("-p", "--port", type=str, default=None)
-parser.add_argument("-b", "--baud", type=int, default=None)
-args = parser.parse_args()
+def build_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--cfg", type=str, default=None)
+    parser.add_argument("-p", "--port", type=str, default=None)
+    parser.add_argument("-b", "--baud", type=int, default=None)
+    return parser
 
 
-root = Tk()
-app = GCodeApp(root, args)
-root.mainloop()
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    root = Tk()
+    app = GCodeApp(root, args)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
