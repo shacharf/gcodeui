@@ -11,7 +11,7 @@ import serial
 import structlog
 import yaml
 from addict import Dict
-from tkinter import END, Button, Entry, Label, Scrollbar, Text, Tk
+from tkinter import END, Button, Entry, Frame, Label, Scrollbar, Text, Tk
 
 
 logger = structlog.get_logger()
@@ -19,6 +19,7 @@ logger = structlog.get_logger()
 
 class GCodeApp:
     NUM_COLS = 4
+    JOG_STEPS = [0.1, 1, 10]
     FG = "#ffffff"
 
     def __init__(self, master, args):
@@ -57,6 +58,9 @@ class GCodeApp:
             self.buttons.append(button)
             self.buttons.append(grid)
 
+        command_rows = self._command_row_count(row, col)
+        self.build_jog_panel(master, command_rows)
+
         master.grid_rowconfigure(row + 1, weight=1)
         master.grid_columnconfigure(row, weight=1)
 
@@ -81,7 +85,9 @@ class GCodeApp:
         try:
             self.ser = serial.Serial(port, baud, timeout=1)
         except serial.SerialException as exc:
-            logger.error("Unable to open serial port", port=port, baud=baud, error=str(exc))
+            logger.error(
+                "Unable to open serial port", port=port, baud=baud, error=str(exc)
+            )
             print(f"Error: could not open serial port {port} at {baud} baud.\n{exc}")
             master.destroy()
             raise SystemExit(1)
@@ -154,12 +160,123 @@ class GCodeApp:
         if getattr(args, "cfg", None):
             yield Path(args.cfg).expanduser()
         yield Path.cwd() / "config.yaml"
-        yield Path(__file__).with_name("config.yaml")
+        #        yield Path(__file__).with_name("config.yaml")
         yield default_config_path()
 
     def get_color(self, cmd: dict):
         color = cmd.get("color", "#c0c0c0")
         return color
+
+    def build_jog_panel(self, master, command_rows):
+        jog_frame = Frame(master, padx=6, pady=6, relief="groove", borderwidth=2)
+        jog_frame.grid(
+            row=1,
+            column=GCodeApp.NUM_COLS + 1,
+            rowspan=max(1, command_rows),
+            sticky="n",
+            padx=(6, 0),
+            pady=(0, 6),
+        )
+        # Label(jog_frame, text="Jog Controls").grid(row=0, column=0, pady=(0, 6))
+
+        labels = ["10mm", "1mm", "0.1mm", " ", "0.1mm", "1mm", "10mm"]
+        frame = Frame(jog_frame)
+        frame.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        for label in labels:
+            # TODO: add the label
+            pass
+
+
+        for i, axis  in enumerate(["X", "Y", "Z"]):
+            frame = Frame(jog_frame)
+            frame.grid(row=i + 1, column=0, sticky="ew", pady=(0, 6))
+            self._build_horizontal_axis(
+                frame,
+                axis_label=axis,
+                negative_factory=lambda step: partial(self.send_relative_move, moves={axis: -step}),
+                positive_factory=lambda step: partial(self.send_relative_move, moves={axis: step})
+            )
+
+    def _build_horizontal_axis(
+        self, parent, axis_label, negative_factory, positive_factory
+    ):
+        # Label(parent, text=f"{axis_label} axis").grid(
+        #     row=0, column=0, columnspan=7, pady=(0, 2)
+        # )
+        left_chars = ["⋘", "≪", "＜"]
+        right_chars = ["＞", "≫", "⋙"]
+        down_chars = ["⤋", "⇓", "↓"]
+        up_chars = ["↑", "⇑", "⤊"]
+
+        left_char_list = down_chars if axis_label == "Z" else left_chars
+        right_char_list = up_chars if axis_label == "Z" else right_chars
+
+        levels = list(enumerate(GCodeApp.JOG_STEPS, start=1))
+        button_row = 1
+        for idx, (level, step) in enumerate(reversed(levels)):
+            print(idx)
+            Button(
+                parent,
+                text=left_char_list[idx],
+                width=1,
+                command=negative_factory(step),
+            ).grid(row=button_row, column=idx, padx=1, pady=1)
+
+        label_column = len(levels)
+        Label(parent, text=axis_label).grid(row=button_row, column=label_column, padx=4)
+
+        for idx, (level, step) in enumerate(levels, start=1):
+            Button(
+                parent,
+                text=right_char_list[idx-1],
+                width=1,
+                command=positive_factory(step),
+            ).grid(row=button_row, column=label_column + idx, padx=1, pady=1)
+
+    def _build_vertical_axis(
+        self, parent, axis_label, positive_factory, negative_factory
+    ):
+        Label(parent, text=f"{axis_label} axis").grid(row=0, column=0, pady=(0, 2))
+        levels = list(enumerate(GCodeApp.JOG_STEPS, start=1))
+        for idx, (level, step) in enumerate(reversed(levels), start=1):
+            Button(
+                parent,
+                text="^" * level,
+                width=4,
+                command=positive_factory(step),
+            ).grid(row=idx, column=0, pady=1)
+
+        mid_row = len(levels) + 1
+        Label(parent, text=axis_label).grid(row=mid_row, column=0, pady=2)
+
+        for idx, (level, step) in enumerate(levels, start=mid_row + 1):
+            Button(
+                parent,
+                text="v" * level,
+                width=4,
+                command=negative_factory(step),
+            ).grid(row=idx, column=0, pady=1)
+
+    def send_relative_move(self, moves):
+        if not moves:
+            return
+
+        coords = " ".join(
+            f"{axis}{self.format_distance(distance)}"
+            for axis, distance in moves.items()
+        )
+        self.send_specific_gcode(["M120", "G91", f"G0 {coords}", "M121"])
+
+    def format_distance(self, value):
+        formatted = f"{value:.3f}".rstrip("0").rstrip(".")
+        return formatted if formatted not in {"-0", "-0."} else "0"
+
+    def _command_row_count(self, row, col):
+        if not self.buttons:
+            return 1
+        if col == 0:
+            return max(1, row - 1)
+        return row
 
 
 def default_config_dir():

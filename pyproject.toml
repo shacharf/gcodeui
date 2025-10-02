@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "gcodeui"
 version = "0.1.0"
-description = "A G-code sender UI for CNC machines and 3D printers"
+description = "Tkinter-based G-code sender for CNC machines and 3D printers"
 readme = "README.md"
 authors = [{ name = "Shachar Fleishman" }]
 license = { file = "LICENSE" }
@@ -17,7 +17,6 @@ dependencies = [
     "pyyaml",
     "addict",
     "structlog",
-    "black",
 ]
 
 [project.urls]
@@ -27,4 +26,8 @@ Homepage = "https://github.com/shachar/gcodeui"
 gcodeui = "gcodeui:main"
 
 [tool.setuptools]
-py-modules = ["gcodeui"]
+packages = ["gcodeui"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+gcodeui = ["config.yaml"]

@@ -1,5 +1,5 @@
 # gcodeui
-Python Tkinter G-code sender for 3D printers and CNC controllers, offering a lightweight serial console with customizable command presets.
+A UI to simplify sending common G-code commands to your 3D printer or CNC controllers, offering a lightweight serial console with customizable command presets.
 
 ![Application screenshot placeholder](docs/screenshot.png)
 
@@ -15,26 +15,37 @@ Python Tkinter G-code sender for 3D printers and CNC controllers, offering a lig
    python -m venv .venv
    source .venv/bin/activate
    ```
-3. Install dependencies:
+3. Install the package:
    ```bash
-   pip install -r requriements.txt
+   pip install .
    ```
-4. Connect your controller (default `/dev/ttyUSB0` on Linux) and launch the UI:
+4. (Optional) Seed the user config and then edit it to your needs:
    ```bash
-   python gcodeui.py --cfg config.yaml --port /dev/ttyUSB0 --baud 115200
+   gcodeui --init
+   ```
+5. Connect your controller (default `/dev/ttyUSB0` on Linux) and launch the UI:
+   ```bash
+   gcodeui
+   ```
+   or provide overrides:
+   ```bash
+   gcodeui --cfg config.yaml --port /dev/ttyUSB0 --baud 115200
    ```
 
 ## Project Layout
-- `gcodeui.py` – Tkinter interface, serial I/O loop, and command dispatch logic
+- `gcodeui/__init__.py` – Tkinter interface, serial I/O loop, and command dispatch logic
 - `config.yaml` – default serial settings and button definitions (titles, G-code, colors)
 - `requriements.txt` – runtime and development dependencies (Tk, PySerial, YAML, logging)
 - `AGENTS.md` – contributor workflow and coding standards
 
 ## Configuration
 Update `config.yaml` to tailor the UI for your machine:
+- `gcodeui --init` seeds `~/.config/gcodeui/config.yaml` (or the platform equivalent) with the bundled template.
 - `port`, `baud`: default connection parameters when the app starts
 - `commands`: list of button definitions with `title`, `command` (`str` or list for macros), and optional `color` hex value
-Restart the app after editing the file to reload presets. You can also override `--cfg` to point at alternative profiles.
+Restart the app after editing the file to reload presets. You can also override `--cfg` to point at alternative profiles or to initialize a config in a custom location (`gcodeui --init --cfg ./my-printer.yaml`).
+
+Follow the example in the default `config.yaml`.
 
 ## Troubleshooting
 - Permission denied on serial port: add your user to the `dialout` (Linux) or `uucp` (macOS) group and reconnect.
