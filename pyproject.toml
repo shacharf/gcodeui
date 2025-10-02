@@ -28,7 +28,3 @@ gcodeui = "gcodeui:main"
 
 [tool.setuptools]
 py-modules = ["gcodeui"]
-include-package-data = true
-
-[tool.setuptools.package-data]
-"" = ["config.yaml"]

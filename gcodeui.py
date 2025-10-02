@@ -75,8 +75,15 @@ class GCodeApp:
         self.close_button.grid(row=row + 3, column=GCodeApp.NUM_COLS)
         master.bind("<Escape>", lambda event=None: master.quit())
 
-        logger.info(f"Initializing serial port {port} : {baud}")
-        self.ser = serial.Serial(port, baud, timeout=1)
+        logger.info("Initializing serial port", port=port, baud=baud)
+        try:
+            self.ser = serial.Serial(port, baud, timeout=1)
+        except serial.SerialException as exc:
+            logger.error("Unable to open serial port", port=port, baud=baud, error=str(exc))
+            print(f"Error: could not open serial port {port} at {baud} baud.\n{exc}")
+            master.destroy()
+            raise SystemExit(1)
+
         self.ser.flush()
 
         self.read_thread = threading.Thread(target=self.read_from_serial)
@@ -154,7 +161,9 @@ class GCodeApp:
 
 
 def build_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Launch gcodeui: an app for sending G-code over a serial connection."
+    )
     parser.add_argument("-c", "--cfg", type=str, default=None)
     parser.add_argument("-p", "--port", type=str, default=None)
     parser.add_argument("-b", "--baud", type=int, default=None)
