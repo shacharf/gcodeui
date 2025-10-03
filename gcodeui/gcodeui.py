@@ -146,21 +146,15 @@ class GCodeApp:
         self.master.destroy()
 
     def get_port(self, args, cfg):
-        port = "/dev/ttyUSB0"
-        baud = 115200
         if args.port is not None:
             port = args.port
         else:
-            cfg_port = cfg.get("port")
-            if cfg_port is not None:
-                port = cfg_port
+            port = cfg.get("port", "/dev/ttyUSB0")
 
         if args.baud is not None:
             baud = args.baud
         else:
-            cfg_baud = cfg.get("baud")
-            if cfg_baud is not None:
-                baud = cfg_baud
+            baud = cfg.get("baud", 115200)
 
         return port, baud
 
@@ -172,10 +166,10 @@ class GCodeApp:
                 with path.open("r", encoding="utf-8") as fh:
                     cfg = yaml.safe_load(fh) or {}
                 logger.info("Loaded config file", path=str(path))
-                return Dict(cfg)
+                return dict(cfg)
 
         logger.warning("Config file not found, using defaults", attempts=attempts)
-        return Dict()
+        return dict()
 
     def config_candidates(self, args):
         if getattr(args, "cfg", None):
