@@ -2,17 +2,16 @@ import argparse
 import os
 import shutil
 import sys
-import threading
-import time
 from functools import partial
 from pathlib import Path
-from queue import Queue, Empty
+from queue import Empty, Queue
 
-import serial
 import structlog
 import yaml
 from addict import Dict
 from tkinter import END, Button, Entry, Frame, Label, Scrollbar, Text, Tk
+
+from gcodeui.serial_worker import SerialWorker
 
 
 logger = structlog.get_logger()
@@ -29,11 +28,15 @@ class GCodeApp:
         self.background_color = cfg.get("background_color", "#f5f7fa")
 
         self.message_queue = Queue()
+        self._queue_active = True
+        self._queue_job = None
+        self._closing = False
 
         self.master = master
         self.master.title("G-code Sender")
         self.master.configure(bg=self.background_color)
-        self.master.after(50, self.flush_queue)
+        self.master.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.schedule_queue_flush()
 
         self.label = Label(master, text="Enter G-code:")
         self.label.grid(row=0, column=0, sticky="nw")
@@ -83,65 +86,64 @@ class GCodeApp:
         self.scrollbar.grid(row=row + 1, column=GCodeApp.NUM_COLS, sticky="nse")
         self.textbox.config(yscrollcommand=self.scrollbar.set)
 
-        self.close_button = Button(master, text="Close", command=master.quit)
+        self.close_button = Button(master, text="Close", command=self.on_close)
         self.close_button.grid(row=row + 3, column=GCodeApp.NUM_COLS)
-        master.bind("<Escape>", lambda event=None: master.quit())
+        master.bind("<Escape>", lambda event=None: self.on_close())
 
-        logger.info("Initializing serial port", port=port, baud=baud)
-        try:
-            self.ser = serial.Serial(port, baud, timeout=1)
-        except serial.SerialException as exc:
-            logger.error(
-                "Unable to open serial port", port=port, baud=baud, error=str(exc)
-            )
-            print(f"Error: could not open serial port {port} at {baud} baud.\n{exc}")
-            master.destroy()
-            raise SystemExit(1)
+        logger.info("Starting serial worker", port=port, baud=baud)
+        self.serial_worker = SerialWorker(port, baud, self.message_queue)
+        self.serial_worker.start()
 
-        self.ser.flush()
-
-        self.read_thread = threading.Thread(target=self.read_from_serial)
-        self.read_thread.daemon = True
-        self.read_thread.start()
+    def schedule_queue_flush(self):
+        if not self._queue_active:
+            return
+        if self._queue_job is not None:
+            return
+        self._queue_job = self.master.after(50, self.flush_queue)
 
     def flush_queue(self):
+        self._queue_job = None
         try:
             while True:
-                line = self.message_queue.get_nowait()
-                self.textbox.insert(END, line + "\n")
+                message = self.message_queue.get_nowait()
+                if message is None:
+                    self._queue_active = False
+                    return
+                self.textbox.insert(END, message + "\n")
                 self.textbox.see(END)
-                print(line)
+                # print(message)
         except Empty:
             pass
         finally:
-            self.master.after(50, self.flush_queue)
-
+            if self._queue_active:
+                self.schedule_queue_flush()
 
     def send_gcode(self):
-        command = self.entry.get()
+        command = self.entry.get().strip()
+        if not command:
+            return
         self.send_specific_gcode(command)
 
-    def lprint(self, line):
-        self.textbox.insert(END, line + "\n")
-        self.textbox.see(END)
-        print(line)
-
     def send_specific_gcode(self, command):
-        if isinstance(command, str):
-            self.ser.write((command + "\n").encode())
-            self.lprint(f"Sent: {command}")
-        elif isinstance(command, list):
-            for cmd_i in command:
-                self.ser.write((cmd_i + "\n").encode())
-                self.lprint(f"Sent: {cmd_i}")
-                time.sleep(0.1)
+        if not hasattr(self, "serial_worker"):
+            logger.warning("Serial worker not initialized; cannot send command")
+            return
+        self.serial_worker.send(command)
 
-    def read_from_serial(self):
-        while True:
-            response = self.ser.readline().decode().strip()
-            if response:
-#                self.lprint(f"Received: {response}")
-                self.message_queue.put(f"Received: {response}")
+    def on_close(self):
+        if self._closing:
+            return
+        self._closing = True
+        self._queue_active = False
+        if self._queue_job is not None:
+            try:
+                self.master.after_cancel(self._queue_job)
+            except ValueError:
+                pass
+            self._queue_job = None
+        if hasattr(self, "serial_worker"):
+            self.serial_worker.shutdown()
+        self.master.destroy()
 
     def get_port(self, args, cfg):
         port = "/dev/ttyUSB0"
@@ -188,7 +190,12 @@ class GCodeApp:
 
     def build_jog_panel(self, master, command_rows):
         jog_frame = Frame(
-            master, padx=6, pady=6, relief="groove", borderwidth=2, bg=self.background_color
+            master,
+            padx=6,
+            pady=6,
+            relief="groove",
+            borderwidth=2,
+            bg=self.background_color,
         )
         jog_frame.grid(
             row=1,
@@ -242,7 +249,7 @@ class GCodeApp:
                 text=left_char_list[idx],
                 width=1,
                 command=negative_factory(step),
-                bg="#e2e8f0"
+                bg="#e2e8f0",
             ).grid(row=button_row, column=idx, padx=1, pady=1)
 
         label_column = len(levels)
@@ -254,7 +261,7 @@ class GCodeApp:
                 text=right_char_list[idx - 1],
                 width=1,
                 command=positive_factory(step),
-                bg="#e2e8f0"
+                bg="#e2e8f0",
             ).grid(row=button_row, column=label_column + idx, padx=1, pady=1)
 
     def _build_vertical_axis(
