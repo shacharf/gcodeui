@@ -3,33 +3,61 @@ baud: 115200
 commands:
   - title: pos
     command: M114
-    color: "#008000"
+    color: "#006723"
   - title: status
     command: M503
-    color: "#008000"
+    color: "#006723"
   - title: Relative
     command: G91
-    color: "#b00000"
+    color: "#004b76"
   - title: Absolute
     command: G90
-    color: "#b00000"
+    color: "#004b76"
+
+  - title: HomeX
+    command: "G28 X"
+    color: "#004b76"
+  - title: HomeY
+    command: "G28 Y"
+    color: "#004b76"
+  - title: HomeZ
+    command: "G28 Z"
+    color: "#004b76"
+  - title: HomeXY
+    command: "G28 X Y"
+    color: "#004b76"
+
+
   - title: OriginXY
     command: "G92 X0 Y0"
-    color: "#b00000"
+    color: "#004b76"
+  - title: OriginXY
+    command: "G92 X0 Y0"
+    color: "#004b76"
   - title: OriginZ
     command: "G92 Z0"
-    color: "#b00000"
+    color: "#004b76"
   - title: debug
     command:  "M111 S38"
-    color: "#008000"
-  - title: Init54
+    color: "#006723"
+  - title: "Init Csystem1"
     command: 
     - G54
     - G92 X0 Y0
     - M211 S0
     - M117 CNC ready
-    color: "#808000"
+    color: "#004b76"
+  - title: "Toolchange"
+    command:
+    - "M0"                  # pause for manual tool swap
+    - "G90"                 # absolute coords
+    - "G0 X0 Y0"            # go to probing point
+    - "G38.2 Z-20 F40"      # probe Z
+    - "G92 Z0"              # set Z=0
+    - "G0 Z30"              # Z to safe
+    color: "#814003"
   - title: Emergency stop
     command: M112
-    color: "#ff0000"
+    color: "#b00000"
 
+background_color: "#f5f7fa"

@@ -1,15 +1,17 @@
 # gcodeui
 A UI to simplify sending common G-code commands to your 3D printer or CNC controllers, offering a lightweight serial console with customizable command presets.
 
+
 ![Application screenshot](docs/screenshot.png)
 
 ## Features
-- Button-driven macros sourced from `config.yaml` for common positioning, status, and safety commands
+- Customizable buttons
+  - sourced from `config.yaml` for *your* common commands
 - Live serial monitor with automatic scrollback to inspect firmware responses in real time
 - Runtime overrides for port and baud rate to simplify switching between machines or profiles
 
 ## Quick Start
-1. Ensure Python 3.7+ is installed.
+1. Ensure Python 3.9+ is installed.
 2. Create and activate a virtual environment:
    ```bash
    python -m venv .venv
