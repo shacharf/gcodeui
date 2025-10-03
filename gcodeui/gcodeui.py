@@ -19,7 +19,7 @@ logger = structlog.get_logger()
 
 class GCodeApp:
     NUM_COLS = 4
-    JOG_STEPS = [0.1, 1, 10]
+    JOG_STEPS = [-10, -1, -0.1, 0, 0.1, 1, 10]
     FG = "#ffffff"
 
     def __init__(self, master, args):
@@ -227,60 +227,24 @@ class GCodeApp:
         # Label(parent, text=f"{axis_label} axis").grid(
         #     row=0, column=0, columnspan=7, pady=(0, 2)
         # )
-        left_chars = ["⋘", "≪", "＜"]
-        right_chars = ["＞", "≫", "⋙"]
-        down_chars = ["⤋", "⇓", "↓"]
-        up_chars = ["↑", "⇑", "⤊"]
+        left_chars = ["⋘", "≪", "＜", "label", "＞", "≫", "⋙"]
+        down_chars = ["⤋", "⇓", "↓", "label", "↑", "⇑", "⤊"]
 
         left_char_list = down_chars if axis_label == "Z" else left_chars
-        right_char_list = up_chars if axis_label == "Z" else right_chars
 
         levels = list(enumerate(GCodeApp.JOG_STEPS, start=1))
         button_row = 1
         for idx, (level, step) in enumerate(reversed(levels)):
-            Button(
-                parent,
-                text=left_char_list[idx],
-                width=1,
-                command=negative_factory(step),
-                bg="#e2e8f0",
-            ).grid(row=button_row, column=idx, padx=1, pady=1)
-
-        label_column = len(levels)
-        Label(parent, text=axis_label).grid(row=button_row, column=label_column, padx=4)
-
-        for idx, (level, step) in enumerate(levels, start=1):
-            Button(
-                parent,
-                text=right_char_list[idx - 1],
-                width=1,
-                command=positive_factory(step),
-                bg="#e2e8f0",
-            ).grid(row=button_row, column=label_column + idx, padx=1, pady=1)
-
-    def _build_vertical_axis(
-        self, parent, axis_label, positive_factory, negative_factory
-    ):
-        Label(parent, text=f"{axis_label} axis").grid(row=0, column=0, pady=(0, 2))
-        levels = list(enumerate(GCodeApp.JOG_STEPS, start=1))
-        for idx, (level, step) in enumerate(reversed(levels), start=1):
-            Button(
-                parent,
-                text="^" * level,
-                width=4,
-                command=positive_factory(step),
-            ).grid(row=idx, column=0, pady=1)
-
-        mid_row = len(levels) + 1
-        Label(parent, text=axis_label).grid(row=mid_row, column=0, pady=2)
-
-        for idx, (level, step) in enumerate(levels, start=mid_row + 1):
-            Button(
-                parent,
-                text="v" * level,
-                width=4,
-                command=negative_factory(step),
-            ).grid(row=idx, column=0, pady=1)
+            if left_char_list[idx] == "label":
+                Label(parent, text=axis_label).grid(row=button_row, column=idx, padx=4)
+            else:
+                Button(
+                    parent,
+                    text=left_char_list[idx],
+                    width=1,
+                    command=negative_factory(step),
+                    bg="#e2e8f0",
+                ).grid(row=button_row, column=idx, padx=1, pady=1)
 
     def send_relative_move(self, moves):
         if not moves:
