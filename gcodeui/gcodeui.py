@@ -6,6 +6,7 @@ import threading
 import time
 from functools import partial
 from pathlib import Path
+from queue import Queue, Empty
 
 import serial
 import structlog
@@ -27,9 +28,12 @@ class GCodeApp:
         port, baud = self.get_port(args, cfg)
         self.background_color = cfg.get("background_color", "#f5f7fa")
 
+        self.message_queue = Queue()
+
         self.master = master
-        master.title("G-code Sender")
-        master.configure(bg=self.background_color)
+        self.master.title("G-code Sender")
+        self.master.configure(bg=self.background_color)
+        self.master.after(50, self.flush_queue)
 
         self.label = Label(master, text="Enter G-code:")
         self.label.grid(row=0, column=0, sticky="nw")
@@ -100,6 +104,19 @@ class GCodeApp:
         self.read_thread.daemon = True
         self.read_thread.start()
 
+    def flush_queue(self):
+        try:
+            while True:
+                line = self.message_queue.get_nowait()
+                self.textbox.insert(END, line + "\n")
+                self.textbox.see(END)
+                print(line)
+        except Empty:
+            pass
+        finally:
+            self.master.after(50, self.flush_queue)
+
+
     def send_gcode(self):
         command = self.entry.get()
         self.send_specific_gcode(command)
@@ -121,10 +138,10 @@ class GCodeApp:
 
     def read_from_serial(self):
         while True:
-            if self.ser.in_waiting > 0:
-                response = self.ser.readline().decode().strip()
-                if response:
-                    self.lprint(f"Received: {response}")
+            response = self.ser.readline().decode().strip()
+            if response:
+#                self.lprint(f"Received: {response}")
+                self.message_queue.put(f"Received: {response}")
 
     def get_port(self, args, cfg):
         port = "/dev/ttyUSB0"

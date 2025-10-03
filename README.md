@@ -1,5 +1,5 @@
 # gcodeui
-A UI to simplify sending common G-code commands to your 3D printer or CNC controllers, offering a lightweight serial console with customizable command presets.
+A customizable UI to simplify sending common G-code commands to your 3D printer or CNC controllers, offering a lightweight serial console with customizable command presets.
 
 
 ![Application screenshot](docs/screenshot.png)
@@ -62,3 +62,4 @@ This project is licensed under the MIT License. See `LICENSE` for details.
 
 ## Changelog
 - 2023-10-14 – Created
+- code cleanup + nicer ui
