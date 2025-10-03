@@ -79,8 +79,7 @@ class SerialWorker:
             return
 
         for index, cmd in enumerate(commands):
-            delay = self.SEND_DELAY_SECONDS if index else 0.0
-            self._write_queue.put((cmd, delay))
+            self._write_queue.put((cmd, self.SEND_DELAY_SECONDS))
 
     def _run(self) -> None:
         self._logger.info("Serial worker thread started")

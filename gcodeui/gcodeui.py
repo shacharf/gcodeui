@@ -8,7 +8,6 @@ from queue import Empty, Queue
 
 import structlog
 import yaml
-from addict import Dict
 from tkinter import END, Button, Entry, Frame, Label, Scrollbar, Text, Tk
 
 from gcodeui.serial_worker import SerialWorker
