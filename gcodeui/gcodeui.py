@@ -25,9 +25,11 @@ class GCodeApp:
     def __init__(self, master, args):
         cfg = self.load_config(args)
         port, baud = self.get_port(args, cfg)
+        self.background_color = cfg.get("background_color", "#f5f7fa")
 
         self.master = master
         master.title("G-code Sender")
+        master.configure(bg=self.background_color)
 
         self.label = Label(master, text="Enter G-code:")
         self.label.grid(row=0, column=0, sticky="nw")
@@ -168,7 +170,9 @@ class GCodeApp:
         return color
 
     def build_jog_panel(self, master, command_rows):
-        jog_frame = Frame(master, padx=6, pady=6, relief="groove", borderwidth=2)
+        jog_frame = Frame(
+            master, padx=6, pady=6, relief="groove", borderwidth=2, bg=self.background_color
+        )
         jog_frame.grid(
             row=1,
             column=GCodeApp.NUM_COLS + 1,
@@ -177,7 +181,6 @@ class GCodeApp:
             padx=(6, 0),
             pady=(0, 6),
         )
-        # Label(jog_frame, text="Jog Controls").grid(row=0, column=0, pady=(0, 6))
 
         labels = ["10mm", "1mm", "0.1mm", " ", "0.1mm", "1mm", "10mm"]
         frame = Frame(jog_frame)
@@ -186,15 +189,18 @@ class GCodeApp:
             # TODO: add the label
             pass
 
-
-        for i, axis  in enumerate(["X", "Y", "Z"]):
+        for i, axis in enumerate(["X", "Y", "Z"]):
             frame = Frame(jog_frame)
             frame.grid(row=i + 1, column=0, sticky="ew", pady=(0, 6))
             self._build_horizontal_axis(
                 frame,
                 axis_label=axis,
-                negative_factory=lambda step: partial(self.send_relative_move, moves={axis: -step}),
-                positive_factory=lambda step: partial(self.send_relative_move, moves={axis: step})
+                negative_factory=lambda step: partial(
+                    self.send_relative_move, moves={axis: -step}
+                ),
+                positive_factory=lambda step: partial(
+                    self.send_relative_move, moves={axis: step}
+                ),
             )
 
     def _build_horizontal_axis(
@@ -214,12 +220,12 @@ class GCodeApp:
         levels = list(enumerate(GCodeApp.JOG_STEPS, start=1))
         button_row = 1
         for idx, (level, step) in enumerate(reversed(levels)):
-            print(idx)
             Button(
                 parent,
                 text=left_char_list[idx],
                 width=1,
                 command=negative_factory(step),
+                bg="#e2e8f0"
             ).grid(row=button_row, column=idx, padx=1, pady=1)
 
         label_column = len(levels)
@@ -228,9 +234,10 @@ class GCodeApp:
         for idx, (level, step) in enumerate(levels, start=1):
             Button(
                 parent,
-                text=right_char_list[idx-1],
+                text=right_char_list[idx - 1],
                 width=1,
                 command=positive_factory(step),
+                bg="#e2e8f0"
             ).grid(row=button_row, column=label_column + idx, padx=1, pady=1)
 
     def _build_vertical_axis(

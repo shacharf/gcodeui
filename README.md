@@ -1,7 +1,7 @@
 # gcodeui
 A UI to simplify sending common G-code commands to your 3D printer or CNC controllers, offering a lightweight serial console with customizable command presets.
 
-![Application screenshot placeholder](docs/screenshot.png)
+![Application screenshot](docs/screenshot.png)
 
 ## Features
 - Button-driven macros sourced from `config.yaml` for common positioning, status, and safety commands
