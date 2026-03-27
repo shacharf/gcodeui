@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gcodeui"
+version = "0.1.0"
+description = "Tkinter-based G-code sender for CNC machines and 3D printers"
+readme = "README.md"
+authors = [{ name = "Shachar Fleishman" }]
+license = { file = "LICENSE" }
+requires-python = ">=3.7"
+keywords = ["gcode", "cnc", "3d-printing", "tkinter", "serial"]
+dependencies = [
+    "tk",
+    "pyserial",
+    "pyyaml",
+    "structlog",
+]
+
+[project.urls]
+Homepage = "https://github.com/shachar/gcodeui"
+
+[project.scripts]
+gcodeui = "gcodeui:main"
+
+[tool.setuptools]
+packages = ["gcodeui"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+gcodeui = ["config.yaml"]
